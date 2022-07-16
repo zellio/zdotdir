@@ -1,0 +1,94 @@
+#!/usr/bin/env zsh
+
+if [ -z "${OP_AUTH_ITEM_NAME_APTIBLE:-}" ]; then
+	printf '>>> \e[38;2;255;0;0mERROR\e[0m: OP_AUTH_ITEM_NAME_APTIBLE is unset, Aptible login will probably fail.\n'
+fi
+
+if [ -z "${OP_AUTH_ITEM_NAME_AWS:-}" ]; then
+	printf '>>> \e[38;2;255;0;0mERROR\e[0m: OP_AUTH_ITEM_NAME_AWS is unset, AWS login will probably fail.\n'
+fi
+
+local op_config_file="${XDG_CONFIG_HOME:-$HOME/.config}"/op/config
+local op_auth_session_cache="${XDG_STATE_HOME:-$HOME/.local/state}"/op/session
+
+if [ ! -s "$op_auth_session_cache" ]; then
+	mkdir -p "$(dirname "$op_auth_session_cache")"
+	echo "# OP Session Cache" >"$op_auth_session_cache"
+fi
+
+local -a op_accounts=(
+	"${(f)"$(jq -r '.accounts[]|.shorthand,.accountUUID' <"$op_config_file")"}"
+)
+
+local op_account
+if (( $op_accounts[(I)$1] )); then
+	op_account="$1"
+	shift
+else
+	local latest_signin="$(jq -r '.latest_signin' <"$op_config_file")"
+	op_account="$latest_signin"
+fi
+
+local token="$(awk -F= "/$op_account/"'{print $2}' $op_auth_session_cache)"
+
+local -a op_flags=("--account=${op_account}" '--cache' "--session=${token}")
+
+local subcommand="$1"
+case "$subcommand" in
+	'signin')
+		local new_token="$(command op signin $op_flags --raw)"
+
+		sed -n -i '/'"$op_account"'=/!p;$a'"$op_account"'='"$new_token" "$op_auth_session_cache"
+
+		token="$new_token"
+		;;
+
+	'auth')
+		op "$op_account" signin
+
+		local account="$2"
+		case "$account" in
+			aptible)
+				local op_auth_item_name="${OP_AUTH_ITEM_NAME_APTIBLE:-Aptible}"
+
+				local item_json="$(
+					op item get \
+						--format=json \
+						--field=username,password \
+						"$op_auth_item_name"
+				)"
+
+				local -r username="$(
+					echo "$item_json" |
+						jq -r '.[]|select(.id == "username").value'
+				)"
+				local -r password="$(
+					echo "$item_json" |
+						jq -r '.[]|select(.id == "password").value'
+				)"
+				local -r otp_token="$(op item get "$op_auth_item_name" --otp)"
+
+				aptible login --email="$username" --password="$password" --otp-token="$otp_token" --lifetime=24h
+				;;
+
+			aws)
+				local op_auth_item_name="${OP_AUTH_ITEM_NAME_AWS:-Amazon Web Service}"
+
+				local -r username="$(op item get "$op_auth_item_name" --fields=username)"
+				local -r otp_token="$(op item get "$op_auth_item_name" --otp)"
+				local -r region="${3:-us-east-1}"
+
+				aws credentials generate-mfa-session \
+					"$otp_token" \
+					'session' \
+					'default' \
+					"arn:aws:iam::${OP_AUTH_ITEM_NAME_AWS_ACCOUNT_ID:-209595011230}:mfa/${OP_AUTH_AWS_MFA_NAME:-$username}" \
+					"$region"
+				;;
+		esac
+		;;
+
+	*)
+		command op $op_flags "$@"
+		;;
+esac

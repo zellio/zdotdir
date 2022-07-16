@@ -1,0 +1,244 @@
+#!/usr/bin/env zsh
+
+function __env-store-is-full
+{
+	if [ -n "${AWS_CREDENTIALS_AWS_PROFILE:-}" ]; then
+		return 0
+	fi
+
+	if [ -n "${AWS_CREDENTIALS_AWS_REGION:-}" ]; then
+		return 0
+	fi
+
+	if [ -n "${AWS_CREDENTIALS_AWS_ACCESS_KEY_ID:-}" ]; then
+		return 0
+	fi
+
+	if [ -n "${AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY:-}" ]; then
+		return 0
+	fi
+
+	if [ -n "${AWS_CREDENTIALS_AWS_SESSION_TOKEN:-}" ]; then
+		return 0
+	fi
+}
+
+function __save-envs
+{
+	if __env-store-is-full; then
+		return 0
+	fi
+
+	export \
+		AWS_CREDENTIALS_AWS_PROFILE="${AWS_PROFILE:-}" \
+		AWS_CREDENTIALS_AWS_REGION="${AWS_REGION:-}" \
+		AWS_CREDENTIALS_AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
+		AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
+		AWS_CREDENTIALS_AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN:-}"
+
+	unset \
+		AWS_PROFILE \
+		AWS_REGION \
+		AWS_ACCESS_KEY_ID \
+		AWS_SECRET_ACCESS_KEY \
+		AWS_SESSION_TOKEN \
+}
+
+function __load-envs
+{
+	export \
+		AWS_PROFILE="${AWS_CREDENTIALS_AWS_PROFILE:-}" \
+		AWS_REGION="${AWS_CREDENTIALS_AWS_REGION:-}" \
+		AWS_ACCESS_KEY_ID="${AWS_CREDENTIALS_AWS_ACCESS_KEY_ID:-}" \
+		AWS_SECRET_ACCESS_KEY="${AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY:-}" \
+		AWS_SESSION_TOKEN="${AWS_CREDENTIALS_AWS_SESSION_TOKEN:-}"
+
+	unset \
+		AWS_CREDENTIALS_AWS_PROFILE \
+		AWS_CREDENTIALS_AWS_REGION \
+		AWS_CREDENTIALS_AWS_ACCESS_KEY_ID \
+		AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY \
+		AWS_CREDENTIALS_AWS_SESSION_TOKEN
+}
+
+case "${1:-}" in
+	credentials)
+		shift
+
+		local -r subcommand="$1"
+
+		shift
+
+		AWS_SHARED_CREDENTIALS_FILE="${AWS_SHARED_CREDENTIALS_FILE:-$HOME/.aws/credentials}"
+
+		case "$subcommand" in
+			help)
+				cat <<'EOF'
+usage: aws credentials <subcommand> [parameters]
+
+To see help text, you can run:
+
+  aws credentials help
+
+aws credentials: error: argument operation: Invalid choice, valid choices are:
+
+add                                      | assume
+delete                                   | generate-mfa-session
+list                                     | load
+show                                     | unload
+EOF
+				;;
+
+			add)
+				local -r label="$1"
+				local -r aws_access_key_id="$2"
+				local -r aws_secret_access_key="$3"
+				local -r aws_session_token="$4"
+				local -r aws_session_token_expiration="$5"
+				local -r region="$6"
+
+				echo "[$label]" >>"$AWS_SHARED_CREDENTIALS_FILE"
+
+				if [ -n "$aws_access_key_id" ]; then
+					echo "aws_access_key_id = $aws_access_key_id" >>"$AWS_SHARED_CREDENTIALS_FILE"
+				fi
+
+				if [ -n "$aws_secret_access_key" ]; then
+					echo "aws_secret_access_key = $aws_secret_access_key" >>"$AWS_SHARED_CREDENTIALS_FILE"
+				fi
+
+				if [ -n "$aws_session_token" ]; then
+					echo "aws_session_token = $aws_session_token" >>"$AWS_SHARED_CREDENTIALS_FILE"
+				fi
+
+				if [ -n "$aws_session_token_expiration" ]; then
+					echo "aws_session_token_expiration = $aws_session_token_expiration" >>"$AWS_SHARED_CREDENTIALS_FILE"
+				fi
+
+				if [ -n "$region" ]; then
+					echo "region = $region" >>"$AWS_SHARED_CREDENTIALS_FILE"
+				fi
+
+				echo "" >>"$AWS_SHARED_CREDENTIALS_FILE"
+				;;
+
+			delete)
+				local -r label="$1"
+				awk -i inplace '/\['"$label"']/{inside=0;next} /^(\[.*])?$/{inside=1} inside{print}' "$AWS_SHARED_CREDENTIALS_FILE"
+				;;
+
+			list)
+				sed -ne 's/^\[//;s/]$//p' "$AWS_SHARED_CREDENTIALS_FILE"
+				;;
+
+			show)
+				local -r label="$1"
+				awk '/\['"$label"']/{inside=1;print;next} /^(\[.*])?$/{inside=0} inside{print}' "$AWS_SHARED_CREDENTIALS_FILE"
+				;;
+
+			generate-mfa-session)
+				local -r mfa_token="$1"
+				local -r label="${2:-session}"
+				local -r profile="${3:-default}"
+				local -r serial_number="${4:-arn:aws:iam::209595011230:mfa/$(whoami)}"
+				local -r region="${5:-us-east-1}"
+
+				local -r session_json="$(
+					aws sts get-session-token \
+						--profile="$profile" \
+						--serial-number="$serial_number" \
+						--token-code="$mfa_token"
+				)"
+
+				if [ -z "$session_json" ]; then
+					return 1
+				fi
+
+				local -r access_key_id="$(echo "$session_json" | jq -r '.Credentials.AccessKeyId')"
+				local -r secret_access_key="$(echo "$session_json" | jq -r '.Credentials.SecretAccessKey')"
+				local -r session_token="$(echo "$session_json" | jq -r '.Credentials.SessionToken')"
+				local -r expiration="$(echo "$session_json" | jq -r '.Credentials.Expiration')"
+
+				aws credentials delete "$label"
+
+				aws credentials \
+					add \
+					"$label" \
+					"$access_key_id" \
+					"$secret_access_key" \
+					"$session_token" \
+					"$expiration" \
+					"$region"
+				;;
+
+			load)
+				__save-envs
+
+				local -r profile="$1"
+				local region="${2:-}"
+
+				if [ -z "$region" ]; then
+					region="$(aws credentials show "$profile" | awk -F'[ =]+' '/region/{print $2}')"
+				fi
+
+				export \
+					AWS_PROFILE="$profile" \
+					AWS_REGION="${region:-us-east-1}" \
+					AWS_ACCESS_KEY_ID='' \
+					AWS_SECRET_ACCESS_KEY='' \
+					AWS_SESSION_TOKEN='' \
+				;;
+
+			assume)
+				__save-envs
+
+				local -r profile="${1:-}"
+				local region="${2:-us-east-1}"
+
+				AWS_CREDENTIALS_AWS_PROFILE="${AWS_PROFILE:-}"
+				AWS_CREDENTIALS_AWS_REGION="${AWS_REGION:-}"
+				AWS_CREDENTIALS_AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}"
+				AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}"
+				AWS_CREDENTIALS_AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN:-}"
+
+				local config="$(aws credentials show "$profile")"
+				local config_region="$(printf '%s' "$config" | awk -F'[ =]+' '/role_session_name/{print $2}')"
+				local source_profile="$(printf '%s' "$config" | awk -F'[ =]+' '/source_profile/{print $2}')"
+				local role_arn="$(printf '%s' "$config" | awk -F'[ =]+' '/role_arn/{print $2}')"
+				local role_session_name="$(printf '%s' "$config" | awk -F'[ =]+' '/role_session_name/{print $2}')"
+
+				AWS_PROFILE=""
+				AWS_REGION="${config_region:-$region}"
+				IFS=$'\t' read -r AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN < <(
+					aws --profile="$source_profile" \
+						sts assume-role \
+						--role-arn "$role_arn" \
+						--role-session-name "$role_session_name" \
+						--query 'Credentials|[AccessKeyId,SecretAccessKey,SessionToken]' \
+						--output=text
+				)
+
+				export \
+					AWS_PROFILE \
+					AWS_REGION \
+					AWS_ACCESS_KEY_ID \
+					AWS_SECRET_ACCESS_KEY \
+					AWS_SESSION_TOKEN \
+				;;
+
+
+			unload)
+				__load-envs
+				;;
+
+			*)
+				aws credentials help
+				return 1
+				;;
+		esac
+		;;
+
+	*)
+		command aws "$@"
+		;;
+esac

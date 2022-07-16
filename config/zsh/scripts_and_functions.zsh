@@ -1,0 +1,19 @@
+#!/usr/bin/env zsh
+
+setopt NO_alias_func_def
+setopt c_bases
+setopt c_precedences
+setopt debug_before_cmd
+setopt NO_err_exit
+setopt NO_err_return
+setopt eval_lineno
+setopt function_argzero
+setopt local_loops
+setopt local_traps
+setopt NO_multi_func_def
+setopt multios
+setopt octal_zeroes
+setopt pipe_fail
+setopt NO_source_trace
+setopt NO_verbose
+setopt NO_xtrace
