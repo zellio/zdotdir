@@ -1,0 +1,21 @@
+#!/usr/bin/env zsh
+
+setopt clobber
+setopt NO_correct
+setopt NO_correct_all
+setopt NO_dvorak
+setopt flow_control
+setopt NO_ignore_eof
+setopt interactive_comments
+setopt hash_cmds
+setopt hash_dirs
+setopt hash_executables_only
+setopt NO_mail_warning
+setopt path_dirs
+setopt path_script
+setopt NO_print_eight_bit
+setopt print_exit_value
+setopt rc_quotes
+setopt NO_rm_star_silent
+setopt rm_star_wait
+setopt short_loops

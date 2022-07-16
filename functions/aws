@@ -1,0 +1,104 @@
+#!/usr/bin/env zsh
+
+function aws-credentials
+{
+	local -r subcommand="$1"; shift
+
+	case "$subcommand" in
+		add)
+			local -r label="$1"
+			local -r aws_access_key_id="$2"
+			local -r aws_secret_access_key="$3"
+			local -r aws_session_token="$4"
+			local -r aws_session_token_expiration="$5"
+			local -r region="$6"
+
+			echo "[$label]" >>"$AWS_SHARED_CREDENTIALS_FILE"
+
+			if [ -n "$aws_access_key_id" ]; then
+				echo "aws_access_key_id = $aws_access_key_id" >>"$AWS_SHARED_CREDENTIALS_FILE"
+			fi
+
+			if [ -n "$aws_secret_access_key" ]; then
+				echo "aws_secret_access_key = $aws_secret_access_key" >>"$AWS_SHARED_CREDENTIALS_FILE"
+			fi
+
+			if [ -n "$aws_session_token" ]; then
+				echo "aws_session_token = $aws_session_token" >>"$AWS_SHARED_CREDENTIALS_FILE"
+			fi
+
+			if [ -n "$aws_session_token_expiration" ]; then
+				echo "aws_session_token_expiration = $aws_session_token_expiration" >>"$AWS_SHARED_CREDENTIALS_FILE"
+			fi
+
+			if [ -n "$region" ]; then
+				echo "region = $region" >>"$AWS_SHARED_CREDENTIALS_FILE"
+			fi
+
+			echo "" >>"$AWS_SHARED_CREDENTIALS_FILE"
+			;;
+
+		delete)
+			local -r label="$1"
+			sed -n -i -e '/\['"$label"'\]/,/^$/d;p' "$AWS_SHARED_CREDENTIALS_FILE"
+			;;
+
+		list)
+			sed -e 's/\[//;s/]//;t;d' "$AWS_SHARED_CREDENTIALS_FILE"
+			;;
+
+		show)
+			local -r label="$1"
+			awk '/\['"$label"']/{print;inside=1;next}/^(\[.*])?$/{inside=0}inside' "$AWS_SHARED_CREDENTIALS_FILE"
+			;;
+
+		generate-mfa-session)
+			local -r mfa_token="$1"
+			local -r label="${2:-session}"
+			local -r profile="${3:-default}"
+			local -r serial_number="${4:-arn:aws:iam::209595011230:mfa/$(whoami)}"
+			local -r region="${5:-us-east-1}"
+
+			local -r session_json="$(
+				aws sts get-session-token \
+					--profile="$profile" \
+					--serial-number="$serial_number" \
+					--token-code="$mfa_token"
+			)"
+
+			if [ -z "$session_json" ]; then
+				return 1
+			fi
+
+			local -r access_key_id="$(echo "$session_json" | jq -r '.Credentials.AccessKeyId')"
+			local -r secret_access_key="$(echo "$session_json" | jq -r '.Credentials.SecretAccessKey')"
+			local -r session_token="$(echo "$session_json" | jq -r '.Credentials.SessionToken')"
+			local -r expiration="$(echo "$session_json" | jq -r '.Credentials.Expiration')"
+
+			aws-credentials delete "$label"
+
+			aws-credentials \
+				add \
+				"$label" \
+				"$access_key_id" \
+				"$secret_access_key" \
+				"$session_token" \
+				"$expiration" \
+				"$region"
+			;;
+
+		*)
+			;;
+	esac
+}
+
+case "$1" in
+	credentials)
+		shift;
+		aws-credentials "$@"
+		;;
+
+	*)
+		command aws "$@"
+		;;
+esac
