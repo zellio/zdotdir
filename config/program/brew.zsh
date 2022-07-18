@@ -19,6 +19,17 @@ path_prepend=(
 	$path_prepend "${HOMEBREW_DIR}"/bin "${HOMEBREW_DIR}"/sbin
 )
 
+### Update function paths
+
+fpath=(
+	"$HOMEBREW_DIR/share/zsh/site-functions"/***/(-/)
+	$fpath
+)
+
+for func ( "$HOMEBREW_DIR/share/zsh/site-functions"/***/*(.N) ); do
+	autoload "$func:t"
+done
+
 ### Aliases
 
 alias htop="sudo htop"
