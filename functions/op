@@ -3,41 +3,51 @@
 local op_config_file="${XDG_CONFIG_HOME}"/op/config
 local op_auth_session_cache="${XDG_STATE_HOME}"/op/session
 
-if [ ! -d "$op_auth_session_cache" ]; then
-    mkdir -p "$op_auth_session_cache"
-    echo "# OP Auth Env Load" >> "$op_auth_session_cache"/env.load
-    echo "# OP Auth Env Unload" >> "$op_auth_session_cache"/env.unload
+if [ ! -s "$op_auth_session_cache" ]; then
+    echo "# OP Session Cache" >"$op_auth_session_cache"
 fi
 
-source "$op_auth_session_cache"/env.load
+local -a op_accounts=(
+    $(jq -r  <"$op_config_file" '.accounts[]|.shorthand,.accountUUID')
+)
+
+local latest_signin="$(jq -r <"$op_config_file" '.latest_signin')"
+
+local op_account
+if (( $op_accounts[(I)$1] )); then
+    op_account="$1"
+    shift
+else
+    op_account="$latest_signin"
+fi
+
+local token="$(awk -F= "/$op_account/"'{print $2}' $op_auth_session_cache)"
+
+local -a op_flags=("--account=${op_account}" '--cache' "--session=${token}")
 
 local subcommand="$1"
 case "$subcommand" in
     'signin')
-        local op_account="$2"
-        if [ -z "$op_account" ]; then
-            op_account="$(jq -r '.latest_signin' <"$op_config_file")"
-        fi
+        local new_token="$(command op signin $op_flags --raw)"
 
-        local -r token="$(
-        	command op signin --account="$op_account" --raw --cache --session="${(P)${:-OP_SESSION_$op_account}:-no-token}"
-        )"
+        sed -n -i '/'"$op_account"'=/!p;$a'"$op_account"'='"$new_token" "$op_auth_session_cache"
 
-        sed -n -i '/^export '"$op_env_value"'=/!p;$aexport '"$op_env_value"'='"'$token'" "$op_auth_session_cache"/env.load
-
-        grep --quiet "unset OP_SESSION_$op_account" "$op_auth_session_cache"/env.unload ||
-            echo "unset OP_SESSION_$op_account" >> "$op_auth_session_cache"/env.unload
+        token="$new_token"
         ;;
 
     'auth')
+        op "$op_account" signin
+
         local account="$2"
         case "$account" in
             aptible)
                 local op_auth_item_name="${OP_AUTH_ITEM_NAME_APTIBLE:-Aptible}"
 
-                local -r username="$(command op item get "$op_auth_item_name" --fields username)"
-                local -r password="$(command op item get "$op_auth_item_name" --fields password)"
-                local -r otp_token="$(command op item get "$op_auth_item_name" --field type=otp --format json | jq -r '.totp')"
+                local item_json="$(op --format=json item get "$op_auth_item_name")"
+
+                local -r username="$(echo "$item_json" | jq -r '.fields[]|select(.id == "username").value')"
+                local -r password="$(echo "$item_json" | jq -r '.fields[]|select(.id == "password").value')"
+                local -r otp_token="$(echo "$item_json" | jq -r '.fields[]|select(.type == "OTP").totp')"
 
                 aptible login --email="$username" --password="$password" --otp-token="$otp_token" --lifetime=24h
                 ;;
@@ -45,12 +55,14 @@ case "$subcommand" in
             aws)
                 local op_auth_item_name="${OP_AUTH_ITEM_NAME_AWS:-Amazon Web Service}"
 
-	            local -r username="$(command op item get "$op_auth_item_name" --fields username)"
-	            local -r mfa_token="$(command op item get "$op_auth_item_name" --field type=otp --format json | jq -r '.totp')"
+                local item_json="$(op --format=json item get "$op_auth_item_name")"
+
+                local -r username="$(echo "$item_json" | jq -r '.fields[]|select(.id == "username").value')"
+                local -r otp_token="$(echo "$item_json" | jq -r '.fields[]|select(.type == "OTP").totp')"
                 local -r region="${3:-us-east-1}"
 
                 aws credentials generate-mfa-session \
-                    "$mfa_token" \
+                    "$otp_token" \
                     'session' \
                     'default' \
                     "arn:aws:iam::$OP_AUTH_ITEM_NAME_AWS_ACCOUNT_ID:mfa/$username" \
@@ -60,8 +72,6 @@ case "$subcommand" in
         ;;
 
     *)
-        command op "$@"
+        command op $op_flags "$@"
         ;;
 esac
-
-source "$op_auth_session_cache"/env.unload
