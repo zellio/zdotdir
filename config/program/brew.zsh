@@ -1,7 +1,15 @@
-#!/usr/bin/evn zsh
+#!/usr/bin/env zsh
 
 is_installed brew || return
 
+export HOMEBREW_API_AUTO_UPDATE_SECS=300
+export HOMEBREW_AUTOREMOVE=1
+export HOMEBREW_AUTO_UPDATE_SECS=43200
+export HOMEBREW_CACHE="$XDG_CACHE_HOME"/homebrew/cache
+export HOMEBREW_CLEANUP_MAX_AGE_DAYS=30
+export HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS=7
+export HOMEBREW_LOGS="$XDG_CACHE_HOME"/homebrew/logs
+export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_NO_ENV_HINTS=1
 
 ### Handle Mac Arm BS
@@ -18,104 +26,61 @@ case "$MACHINE-$OSTYPE" in
 esac
 
 path_dirs_system=(
-    "${HOMEBREW_DIR}"/bin "${HOMEBREW_DIR}"/sbin $path_dirs_system
+    "$HOMEBREW_DIR"/bin "$HOMEBREW_DIR"/sbin $path_dirs_system
 )
 
 ### Update function paths
 
 fpath=(
-	"$HOMEBREW_DIR/share/zsh/site-functions"/***/(-/)
+	"$HOMEBREW_DIR"/share/zsh/site-functions/***/(-/)
 	$fpath
 )
 
-for func ( "$HOMEBREW_DIR/share/zsh/site-functions"/***/*(.N) ); do
+for func ( "$HOMEBREW_DIR"/share/zsh/site-functions/***/*(.N) ); do
 	autoload "$func:t"
 done
 
 ### Aliases
 
-alias htop="sudo htop"
 alias mtr="sudo mtr"
 
 ### Update paths
 
 path_dirs_program=(
-	$path_dirs_program "${HOMEBREW_DIR}/opt/"*/libexec/gnubin
+	$path_dirs_program
+    "${(@f)$(find "$HOMEBREW_DIR"/Cellar -maxdepth 4 -name 'gnubin')}"
 )
 
-keg_programs=(
-	'bison'
-	'bzip2'
-	'curl'
-	'flex'
-	'ghostscript'
-	'gnu-getopt'
-	'icu4c'
-	'krb5'
-	'libffi'
-	'llvm'
-	'm4'
-	'ncurses'
-	'openjdk'
-	'openldap'
-	'postgresql@12'
-	'readline'
-	'ruby'
-	'sqlite'
-	'tcl-tk'
-	'zlib'
-)
+function brew-load-keg-flags
+{
+    set -x
+
+    local -a kegs=(
+        "${(@f)$(
+            brew info --installed --json=v2 | jq --raw-output '.formulae[]|select(.keg_only)|.name'
+        )}"
+    )
+
+    for keg ( $kegs ); do
+        local keg_base="${HOMEBREW_DIR}/opt/${keg}"
+
+        if [ -d "$keg_base"/lib ]; then
+            ldflags=($ldflags "-L$keg_base"/lib)
+        fi
+
+        if [ -d "$keg_base"/include ]; then
+            cppflags=($cppflags "-I$keg_base"/include)
+        fi
+
+        if [ -d "$keg_base"/lib/pkgconfig ]; then
+            pkg_config_path=($pkg_config_path "$keg_base"/lib/pkgconfig)
+        fi
+    done
+}
 
 typeset -UT LDFLAGS='' ldflags ' '
 typeset -UT CFLAGS='' cflags ' '
 typeset -UT CPPFLAGS='' cppflags ' '
 typeset -UT PKG_CONFIG_PATH='' pkg_config_path ':'
 
-for program in $keg_programs; do
-	bin_path="${HOMEBREW_DIR}/opt/${program}/bin"
-	if [ -d "$bin_path" ]; then
-		path_dirs_program=($path_dirs_program "$bin_path")
-	fi
-
-	ld_path="${HOMEBREW_DIR}/opt/${program}/lib"
-	if [ -d "$ld_path" ]; then
-		ldflags=($ldflags "-L$ld_path")
-	fi
-
-	cpp_flags_path="${HOMEBREW_DIR}/opt/${program}/include"
-	if [ -d "$cpp_flags_path" ]; then
-		cppflags=($cppflags "-I$cpp_flags_path")
-	fi
-
-	config_path="${HOMEBREW_DIR}/opt/${program}/lib/pkgconfig"
-	if [ -d "$config_path" ]; then
-		pkg_config_path=($pkg_config_path "$config_path")
-	fi
-done
-
-unset keg_programs program bin_path ld_path cpp_flags_path config_path
-
-export LDFLAGS
-export CFLAG="$CPPFLAGS"
-export CPPFLAGS
-export PKG_CONFIG_PATH
-
-### Homebrew specific program weirdness
-
-# Guile
-export GUILE_LOAD_PATH="${HOMEBREW_DIR}/share/guile/site/3.0"
-export GUILE_LOAD_COMPILED_PATH="${HOMEBREW_DIR}/lib/guile/3.0/site-ccache"
-export GUILE_SYSTEM_EXTENSIONS_PATH="${HOMEBREW_DIR}/lib/guile/3.0/extensions"
-export GUILE_TLS_CERTIFICATE_DIRECTORY="${HOMEBREW_DIR}/etc/gnutls/"
-
-# Golang
-export GOROOT="${HOMEBREW_DIR}/opt/go/libexec"
-
-# Java
-export JAVA_HOME="${HOMEBREW_DIR}/opt/openjdk"
-
-# Groovy
-export GROOVY_HOME="${HOMEBREW_DIR}/opt/groovy/libexec"
-typeset -UT GROOVY_CLASSPATH groovy_classpath ':'
-export groovy_classpath=($GROOVY_HOME/lib/*.jar(.))
-alias groovysh="$GROOVY_HOME/bin/groovysh --classpath $GROOVY_CLASSPATH"
+export LDFLAGS CFLAGS CPPFLAGS PKG_CONFIG_PAHT

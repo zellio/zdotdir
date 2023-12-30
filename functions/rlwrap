@@ -14,4 +14,4 @@ local -a rlwrap_args=(
 	--history-filename="${history_directory}/${command}"
 )
 
-command rlwrap "${rlwrap_args[@]}" -- "$@"
+command rlwrap "${rlwrap_args[@]}" "$@"

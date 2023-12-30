@@ -59,7 +59,6 @@ case "$MACHINE-$OSTYPE" in
 esac
 
 ### Load configuration
-
 for config (
 		"${ZDOTDIR}/config/zsh"/*.zsh(N)
 		"${ZDOTDIR}/config/program"/*.zsh(N)
@@ -96,6 +95,3 @@ compinit -i -d "${XDG_STATE_HOME}/zsh/zshcompdump"
 
 autoload -U +X bashcompinit
 compinit -i -d "${XDG_STATE_HOME}/zsh/bashcompdump"
-
-### Included by spark-setup
-# source '/Users/zellio/.config/trialspark/trialsparkrc'

@@ -17,13 +17,12 @@ export SOLARGRAPH_CACHE="$XDG_CACHE_HOME"/solargraph
 
 export RBENV_ROOT="$XDG_DATA_HOME"/rbenv
 if [ -d "$RBENV_ROOT" ]; then
-	path_dirs_user+=("$RBENV_ROOT/shims")
+	path_dirs_user+=("$RBENV_ROOT"/shims)
 
     function rbenv
     {
         eval "$(
-            command rbenv init - "$PROFILE_SHELL" |
-                sed -n '/^[[:alpha:]]\+env[[:space:]]*([[:space:]]*)[[:space:]]*{/,$p'
+            command rbenv init - "$PROFILE_SHELL" | sed -ne '/rbenv()/,/^}$/p'
         )"
         rbenv "$@"
     }

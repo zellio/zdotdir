@@ -1,94 +1,81 @@
 #!/usr/bin/env zsh
 
-if [ -z "${OP_AUTH_ITEM_NAME_APTIBLE:-}" ]; then
-	printf '>>> \e[38;2;255;0;0mERROR\e[0m: OP_AUTH_ITEM_NAME_APTIBLE is unset, Aptible login will probably fail.\n'
-fi
+OP_AUTH_ITEM_NAME_APTIBLE="${OP_AUTH_ITEM_NAME_APTIBLE:-Aptible}"
+OP_AUTH_ITEM_NAME_AWS="${OP_AUTH_ITEM_NAME_AWS:-AWS}"
 
-if [ -z "${OP_AUTH_ITEM_NAME_AWS:-}" ]; then
-	printf '>>> \e[38;2;255;0;0mERROR\e[0m: OP_AUTH_ITEM_NAME_AWS is unset, AWS login will probably fail.\n'
-fi
-
-local op_config_file="${XDG_CONFIG_HOME:-$HOME/.config}"/op/config
-local op_auth_session_cache="${XDG_STATE_HOME:-$HOME/.local/state}"/op/session
-
-if [ ! -s "$op_auth_session_cache" ]; then
-	mkdir -p "$(dirname "$op_auth_session_cache")"
-	echo "# OP Session Cache" >"$op_auth_session_cache"
-fi
-
-local -a op_accounts=(
-	"${(f)"$(jq -r '.accounts[]|.shorthand,.accountUUID' <"$op_config_file")"}"
-)
-
-local op_account
-if (( $op_accounts[(I)$1] )); then
-	op_account="$1"
-	shift
-else
-	local latest_signin="$(jq -r '.latest_signin' <"$op_config_file")"
-	op_account="$latest_signin"
-fi
-
-local token="$(awk -F= "/$op_account/"'{print $2}' $op_auth_session_cache)"
-
-local -a op_flags=("--account=${op_account}" '--cache' "--session=${token}")
-
-local subcommand="$1"
-case "$subcommand" in
-	'signin')
-		local new_token="$(command op signin $op_flags --raw)"
-
-		sed -n -i '/'"$op_account"'=/!p;$a'"$op_account"'='"$new_token" "$op_auth_session_cache"
-
-		token="$new_token"
-		;;
-
-	'auth')
-		op "$op_account" signin
-
+case "$1" in
+	auth)
 		local account="$2"
 		case "$account" in
 			aptible)
-				local op_auth_item_name="${OP_AUTH_ITEM_NAME_APTIBLE:-Aptible}"
-
-				local item_json="$(
-					op item get \
-						--format=json \
-						--field=username,password \
-						"$op_auth_item_name"
+				local aptible_email
+				aptible_email="$(
+					op read "op://Private/${OP_AUTH_ITEM_NAME_APTIBLE}/email"
 				)"
 
-				local -r username="$(
-					echo "$item_json" |
-						jq -r '.[]|select(.id == "username").value'
+				local aptible_password
+				aptible_password="$(
+					op read "op://Private/${OP_AUTH_ITEM_NAME_APTIBLE}/password"
 				)"
-				local -r password="$(
-					echo "$item_json" |
-						jq -r '.[]|select(.id == "password").value'
-				)"
-				local -r otp_token="$(op item get "$op_auth_item_name" --otp)"
 
-				aptible login --email="$username" --password="$password" --otp-token="$otp_token" --lifetime=24h
+				local aptible_otp_token
+				aptible_otp_token="$(
+					op read "op://Private/${OP_AUTH_ITEM_NAME_APTIBLE}/one-time-password?attribute=otp"
+				)"
+
+				command aptible login \
+					--email="$aptible_email" \
+					--password="$aptible_password" \
+					--otp-token="$aptible_otp_token" \
+					--lifetime=24
 				;;
 
 			aws)
-				local op_auth_item_name="${OP_AUTH_ITEM_NAME_AWS:-Amazon Web Service}"
+				local aws_expiration_datestamp
+				aws_expiration_datestamp="$(aws configure --profile="$profile" get aws_session_expiration)"
 
-				local -r username="$(op item get "$op_auth_item_name" --fields=username)"
-				local -r otp_token="$(op item get "$op_auth_item_name" --otp)"
-				local -r region="${3:-us-east-1}"
+				local aws_expiration_unix_time
+				aws_expiration_unix_time="$(date --date="$aws_expiration_datestamp" '+%s')"
 
-				aws credentials generate-mfa-session \
-					"$otp_token" \
-					'session' \
-					'default' \
-					"arn:aws:iam::${OP_AUTH_ITEM_NAME_AWS_ACCOUNT_ID:-209595011230}:mfa/${OP_AUTH_AWS_MFA_NAME:-$username}" \
-					"$region"
+				local unix_time
+				unix_time="$(date '+%s')"
+
+				if (( aws_expiration_unix_time < unix_time )); then
+					return 0
+				fi
+
+				local aws_username
+				aws_username="$(op read "op://Private/${OP_AUTH_ITEM_NAME_AWS}/username")"
+
+				local aws_password
+				aws_password="$(op read "op://Private/${OP_AUTH_ITEM_NAME_AWS}/password")"
+
+				local aws_otp_token
+				aws_otp_token="$(op read "op://Private/${OP_AUTH_ITEM_NAME_AWS}/one-time password?attribute=otp")"
+
+				IFS=$'\t' read -r aws_access_key_id aws_secret_access_key aws_session_token aws_session_expiration < <(
+					command aws sts get-session-token \
+						--region=us-east-1 \
+						--duration=28800 \
+						--serial-number="arn:aws:iam::${OP_AUTH_ITEM_NAME_AWS_ACCOUNT_ID:-209595011230}:mfa/${OP_AUTH_AWS_MFA_NAME:-$aws_username}" \
+						--token-code="$aws_otp_token" \
+						--query='Credentials.[AccessKeyId, SecretAccessKey, SessionToken, Expiration]' \
+						--output=text
+				)
+
+				aws configure --profile='session' set aws_access_key_id "$aws_access_key_id"
+				aws configure --profile='session' set aws_secret_access_key "$aws_secret_access_key"
+				aws configure --profile='session' set aws_session_token "$aws_session_token"
+				aws configure --profile='session' set aws_session_expiration "$aws_session_expiration"
+				;;
+
+			*)
+				return 1
 				;;
 		esac
 		;;
 
 	*)
-		command op $op_flags "$@"
+		command op "$@"
 		;;
 esac
