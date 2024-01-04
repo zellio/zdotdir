@@ -31,24 +31,27 @@ case "$1" in
 				;;
 
 			aws)
+				local profile="${3:-session}"
+
 				local aws_expiration_datestamp
-				aws_expiration_datestamp="$(aws configure --profile="$profile" get aws_session_expiration)"
+				aws_expiration_datestamp="$(
+					aws configure --profile="$profile" get aws_session_expiration 2>/dev/null || true
+				)"
 
-				local aws_expiration_unix_time
-				aws_expiration_unix_time="$(date --date="$aws_expiration_datestamp" '+%s')"
+                local aws_expiration_timestamp=0
+                if [ -n "$aws_expiration_datestamp" ]; then
+                    aws_expiration_timestamp="$(date --date="$aws_expiration_datestamp" '+%s')"
+                fi
 
-				local unix_time
-				unix_time="$(date '+%s')"
+	            local timestamp_now
+	            timestamp_now="$(date '+%s')"
 
-				if (( aws_expiration_unix_time < unix_time )); then
-					return 0
-				fi
+                if (( timestamp_now < aws_expiration_timestamp )); then
+                    return 0
+                fi
 
 				local aws_username
 				aws_username="$(op read "op://Private/${OP_AUTH_ITEM_NAME_AWS}/username")"
-
-				local aws_password
-				aws_password="$(op read "op://Private/${OP_AUTH_ITEM_NAME_AWS}/password")"
 
 				local aws_otp_token
 				aws_otp_token="$(op read "op://Private/${OP_AUTH_ITEM_NAME_AWS}/one-time password?attribute=otp")"
@@ -63,10 +66,10 @@ case "$1" in
 						--output=text
 				)
 
-				aws configure --profile='session' set aws_access_key_id "$aws_access_key_id"
-				aws configure --profile='session' set aws_secret_access_key "$aws_secret_access_key"
-				aws configure --profile='session' set aws_session_token "$aws_session_token"
-				aws configure --profile='session' set aws_session_expiration "$aws_session_expiration"
+				aws configure --profile="$profile" set aws_access_key_id "$aws_access_key_id"
+				aws configure --profile="$profile" set aws_secret_access_key "$aws_secret_access_key"
+				aws configure --profile="$profile" set aws_session_token "$aws_session_token"
+				aws configure --profile="$profile" set aws_session_expiration "$aws_session_expiration"
 				;;
 
 			*)
