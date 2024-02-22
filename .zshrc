@@ -21,7 +21,10 @@ fi
 
 ### Initialize dynamic path building
 
-typeset -gU cdpath fpath mailpath path
+typeset -gUT PATH path :
+typeset -gUT CDPATH cdpath :
+typeset -gUT FPATH fpath :
+typeset -gUT MAILPATH mailpath :
 
 typeset -Ua \
 	path_dirs_append \
@@ -37,19 +40,18 @@ path_dirs_prepend=(
 )
 
 path_dirs_system=(
-	/usr/local/bin /usr/local/sbin
-	/usr/bin /usr/sbin
-	/bin /sbin
+	/usr/local/bin
+	/usr/local/sbin
+	/usr/bin
+	/usr/sbin
+	/bin
+	/sbin
 )
 
-path_dirs_append=(
-	/Library/Apple/usr/bin
-)
+### Normalize path for loading, we'll set it later
 
-
-# Normalize path for loading, we'll set it later
 case "$MACHINE-$OSTYPE" in
-	arm*-darwin*)
+	arm*-darwin*|aarch*-darwin*)
 		path=(/opt/homebrew/bin /opt/homebrew/sbin $path_dirs_system)
 		;;
 
@@ -59,12 +61,13 @@ case "$MACHINE-$OSTYPE" in
 esac
 
 ### Load configuration
+
 for config (
-		"${ZDOTDIR}/config/zsh"/*.zsh(N)
-		"${ZDOTDIR}/config/program"/*.zsh(N)
-		"${ZDOTDIR}/custom"/**/*.zsh(N)
-		"${ZDOTDIR}/config/system"/*.zsh(N)
-		"${ZDOTDIR}/post-init"/**/*.zsh(N)
+		"$ZDOTDIR"/config/zsh/*.zsh(.N)
+		"$ZDOTDIR"/config/program/*.zsh(.N)
+		"$ZDOTDIR"/custom/**/*.zsh(.N)
+		"$ZDOTDIR"/config/system/*.zsh(.N)
+		"$ZDOTDIR"/post-init/**/*.zsh(.N)
 	); do
 	source "$config:A"
 done
@@ -72,26 +75,28 @@ done
 ### Load functions
 
 fpath=(
-	"${ZDOTDIR}/functions"/***/(-/)
-	"${ZDOTDIR}/completions"/***/(-/)
+	"$ZDOTDIR"/functions
+	"$ZDOTDIR"/functions/***(FN)
+	"$ZDOTDIR"/completions
+	"$ZDOTDIR"/completions/***(FN)
 	$fpath
 )
 
 for func (
-		"${ZDOTDIR}/functions"/***/*(.N)
-		"${ZDORDIR}/completions"/***/*(.N)
+		"$ZDOTDIR"/functions/***(.N)
+		"$ZDOTDIR"/completions/***(.N)
 	); do
 	autoload "$func:t"
 done
 
 ### Compinit setup
 
-if [ ! -d "${XDG_STATE_HOME}/zsh" ]; then
-	mkdir -p "${XDG_STATE_HOME}/zsh"
+if [ ! -d "$XDG_STATE_HOME"/zsh ]; then
+	mkdir -p "$XDG_STATE_HOME"/zsh
 fi
 
 autoload -U compinit
-compinit -i -d "${XDG_STATE_HOME}/zsh/zshcompdump"
+compinit -i -d "$XDG_STATE_HOME"/zsh/zshcompdump
 
 autoload -U +X bashcompinit
-compinit -i -d "${XDG_STATE_HOME}/zsh/bashcompdump"
+compinit -i -d "$XDG_STATE_HOME"/zsh/bashcompdump

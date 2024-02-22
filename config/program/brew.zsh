@@ -26,56 +26,87 @@ case "$MACHINE-$OSTYPE" in
 esac
 
 path_dirs_system=(
-    "$HOMEBREW_DIR"/bin "$HOMEBREW_DIR"/sbin $path_dirs_system
+	"$HOMEBREW_DIR"/bin "$HOMEBREW_DIR"/sbin $path_dirs_system
 )
 
 ### Update function paths
 
 fpath=(
-	"$HOMEBREW_DIR"/share/zsh/site-functions/***/(-/)
+	"$HOMEBREW_DIR"/share/zsh/site-functions
+	"$HOMEBREW_DIR"/share/zsh/site-functions/***(FN)
 	$fpath
 )
 
-for func ( "$HOMEBREW_DIR"/share/zsh/site-functions/***/*(.N) ); do
+for func ( "$HOMEBREW_DIR"/share/zsh/site-functions/***(-.N) ); do
 	autoload "$func:t"
 done
 
-### Aliases
-
-alias mtr="sudo mtr"
-
 ### Update paths
 
-path_dirs_program=(
-	$path_dirs_program
-    "${(@f)$(find "$HOMEBREW_DIR"/Cellar -maxdepth 4 -name 'gnubin')}"
+local -a gnubins=(
+	'coreutils'
+	'findutils'
+	'gawk'
+	'gnu-sed'
+	'grep'
+	'libtool'
 )
+
+for gnubin ( $gnubins ); do
+	path_dirs_program=(
+		$path_dirs_program "${HOMEBREW_DIR}/opt/${gnubin}/libexec/gnubin"
+	)
+done
+
+local -a kegbins=(
+	'berkeley-db'
+	'bison'
+	'bzip2'
+	'curl'
+	'flex'
+	'gnu-getopt'
+	'icu4c'
+	'jpeg'
+	'krb5'
+	'libxml2'
+	'llvm'
+	'm4'
+	'openjdk'
+	'openldap'
+	'postgresql@12'
+	'sqlite'
+)
+
+local keg
+for keg ( $kegbins ); do
+	path_dirs_program=($path_dirs_program "${HOMEBREW_DIR}/opt/${keg}/bin")
+done
 
 function brew-load-keg-flags
 {
-    set -x
+	set -x
 
-    local -a kegs=(
-        "${(@f)$(
-            brew info --installed --json=v2 | jq --raw-output '.formulae[]|select(.keg_only)|.name'
-        )}"
-    )
+	local -a kegs=(
+		"${(@f)$(
+			brew info --installed --json=v2 | jq --raw-output '.formulae[]|select(.keg_only)|.name'
+		)}"
+	)
 
-    for keg ( $kegs ); do
-        local keg_base="${HOMEBREW_DIR}/opt/${keg}"
+	for keg ( $kegs ); do
+		local keg_base="${HOMEBREW_DIR}/opt/${keg}"
 
-        if [ -d "$keg_base"/lib ]; then
-            ldflags=($ldflags "-L$keg_base"/lib)
-        fi
+		if [ -d "$keg_base"/lib ]; then
+			ldflags=($ldflags "-L$keg_base"/lib)
+		fi
 
-        if [ -d "$keg_base"/include ]; then
-            cppflags=($cppflags "-I$keg_base"/include)
-        fi
+		if [ -d "$keg_base"/include ]; then
+			cppflags=($cppflags "-I$keg_base"/include)
+		fi
 
-        if [ -d "$keg_base"/lib/pkgconfig ]; then
-            pkg_config_path=($pkg_config_path "$keg_base"/lib/pkgconfig)
-        fi
-    done
+		if [ -d "$keg_base"/lib/pkgconfig ]; then
+			pkg_config_path=($pkg_config_path "$keg_base"/lib/pkgconfig)
+		fi
+	done
 }
 
 typeset -UT LDFLAGS='' ldflags ' '

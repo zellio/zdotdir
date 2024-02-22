@@ -6,7 +6,7 @@ export XDG_DATA_HOME="${XDG_DATA_HOME:-"$HOME"/.local/share}"
 export XDG_STATE_HOME="${XDG_STATE_HOME:-"$HOME"/.local/state}"
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/"$UID"}"
 
-export XDG_BIN_DIR="${XDG_BIN_DIR:-$HOME/.local/bin}"
+export XDG_BIN_DIR="${XDG_BIN_DIR:-"$HOME"/.local/bin}"
 
 # Plaster over osx weirdness
 if [ ! -w "$XDG_RUNTIME_DIR" ]; then
@@ -19,3 +19,5 @@ export ZDOTDIR="${ZDOTDIR:-"$XDG_CONFIG_HOME"/zsh}"
 if [[ ! -o login && -s "$ZDOTDIR"/.zprofile ]]; then
 	source "$ZDOTDIR"/.zprofile
 fi
+
+### .zshenv ends here

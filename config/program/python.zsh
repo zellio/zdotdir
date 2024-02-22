@@ -27,7 +27,7 @@ if [ -d "$PYENV_ROOT" ]; then
 	function pyenv
     {
 		eval "$(
-            command pyenv init - "$PROFILE_SHELL" | sed -n '/pyenv()/,$p'
+            command pyenv init - "$PROFILE_SHELL" | sed -n '/pyenv()/,/^}$/p'
         )"
 
 		pyenv "$@"

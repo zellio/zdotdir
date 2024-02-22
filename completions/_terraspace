@@ -1,0 +1,291 @@
+#compdef _terraspace terraspace
+
+function _terraspace_cache_policy
+{
+	local oldp
+	oldp=("$1"(Nmh+24))
+	(( $#oldp ))
+}
+
+function _cached_terraspace_completion
+{
+	local subcommand="${1:-}"
+
+	local curcontext="$curcontext"
+
+	local cache_policy
+	zstyle -s ":completion:${curcontext}:" cache-policy cache_policy
+
+	if [[ -z "$cache_policy" ]]; then
+		zstyle ":completion:${curcontext}:" cache-policy _terraspace_cache_policy
+	fi
+
+	local -a _commands=()
+	local _cached_commands="_terraspace_completion${subcommand:+_}${subcommand:-}"
+
+	if _cache_invalid "$_cached_commands" || ! _retrieve_cache $_cached_commands; then
+		set -x
+		_commands=(${(f)"$(terraspace completion $subcommand --verbose 2>/dev/null)"})
+		set +x
+
+		if (( $#_commands )); then
+			_store_cache "$_cached_commands" _commands
+		else
+			_commands=""
+		fi
+	fi
+
+	_values "command" $_commands
+}
+
+function _terraspace_stacks
+{
+	local curcontext="$curcontext"
+
+	local cache_policy
+	zstyle -s ":completion:${curcontext}:" cache-policy cache_policy
+
+	if [[ -z "$cache_policy" ]]; then
+		zstyle ":completion:${curcontext}:" cache-policy _terraspace_cache_policy
+	fi
+
+	local -a _commands=()
+	local _cached_commands="_terraspace_stacks"
+
+	if _cache_invalid "$_cached_commands" || ! _retrieve_cache $_cached_commands; then
+		set -x
+		_commands=(${${(f)"$(terraspace list --type stack 2>/dev/null)"}##*/})
+		set +x
+
+		if (( $#_commands )); then
+			_store_cache "$_cached_commands" _commands
+		else
+			_commands=""
+		fi
+	fi
+
+	_values "stack" $_commands
+}
+
+function _terraspace_modules
+{
+	local curcontext="$curcontext"
+
+	local cache_policy
+	zstyle -s ":completion:${curcontext}:" cache-policy cache_policy
+
+	if [[ -z "$cache_policy" ]]; then
+		zstyle ":completion:${curcontext}:" cache-policy _terraspace_cache_policy
+	fi
+
+	local -a _commands=()
+	local _cached_commands="_terraspace_modules"
+
+	if _cache_invalid "$_cached_commands" || ! _retrieve_cache $_cached_commands; then
+		set -x
+		_commands=(${${(f)"$(terraspace list --type module 2>/dev/null)"}##*/})
+		set +x
+
+		if (( $#_commands )); then
+			_store_cache "$_cached_commands" _commands
+		else
+			_commands=""
+		fi
+	fi
+
+	_values "stack" $_commands
+}
+
+function _terraspace_commands
+{
+	_cached_terraspace_completion
+}
+
+function _terraspace
+{
+	local -A opt_args
+	local context state line
+
+	local curcontext="$curcontext"
+
+	_arguments -C \
+		':command:_terraspace_commands' \
+		'*::options:->options'
+
+	case "$state" in
+		(options)
+			case $line[1] in
+				(all)
+					_cached_terraspace_completion $line[1]
+					;;
+
+				(build)
+					:
+					;;
+
+				(bundle)
+					:
+					;;
+
+				(console)
+					:
+					;;
+
+				(down)
+					:
+					;;
+
+				(force_unlock)
+					:
+					;;
+
+				(list)
+					_arguments \
+						'--type=[Type: stack, module, or all]:type:(stack module all)' \
+						'(--verbose --no-verbose)'--{no-,}verbose \
+						'(--noop --no-noop)'--{no-,}noop \
+					;;
+
+				(new)
+					:
+					;;
+
+				(plan)
+					_arguments \
+						'(--auto --no-auto)'--{no-,}auto'[Auto mode is useful for CI automation]' \
+						'(--init --no-init)'--{no-,}init'[Whether or not to run init]' \
+						'(-i --instance)'{-i,--instance=}'[Instance of stack]:instance' \
+						'(-o --out)'{-o,--out=}'[Output path. Can be a pattern like :MOD_NAME.plan]'\
+						'(--reconfigure --no-reconfigure)'--{no-,}reconfigure'[Add terraform -reconfigure option]' \
+						'(--copy-to-root --no-copy-to-root)'--{no-,}copy-to-root'[Copy plan file generated in the cache folder back to project root]' \
+						'(--verbose --no-verbose)'--{no-,}verbose \
+						'(--noop --no-noop)'--{no-,}noop \
+						':stack:_terraspace_stacks'
+					;;
+
+				(seed)
+					:
+					;;
+
+				(up)
+					_arguments \
+						'(--auto --no-auto)'--{no-,}auto'[Auto mode is useful for CI automation]' \
+						'(--init --no-init)'--{no-,}init'[Whether or not to run init]' \
+						'(-i --instance)'{-i,--instance=}'[Instance of stack]:instance' \
+						'(-y --yes --no-yes)'--{no-,}yes'[-auto-approve the terraform apply]' \
+						'(--reconfigure --no-reconfigure)'--{no-,}reconfigure'[Add terraform -reconfigure option]' \
+						'--plan[Execution plan that can be used to only execute a pre-determined set of actions.]:plan' \
+						'--var-files[list of var files]:_files' \
+						'(--verbose --no-verbose)'--{no-,}verbose \
+						'(--noop --no-noop)'--{no-,}noop \
+						':stack:_terraspace_stacks'
+					;;
+
+				(help)
+					:
+					;;
+
+				(clean)
+					:
+					;;
+
+				(setup)
+					:
+					;;
+
+				(tfc)
+					:
+					;;
+
+				(fmt)
+					:
+					;;
+
+				(import)
+					:
+					;;
+
+				(info)
+					:
+					;;
+
+				(init)
+					:
+					;;
+
+				(logs)
+					:
+					;;
+
+				(providers)
+					:
+					;;
+
+				(refresh)
+					:
+					;;
+
+				(summary)
+					:
+					;;
+
+				(show)
+					:
+					;;
+
+				(state)
+					:
+					;;
+
+				(test)
+					:
+					;;
+
+				(output)
+					:
+					;;
+
+				(validate)
+					:
+					;;
+
+				(completion)
+					:
+					;;
+
+				(completion_script)
+					:
+					;;
+
+				(version)
+					:
+					;;
+
+				*)
+					:
+					;;
+			esac
+			;;
+	esac
+
+# 	case "$state" in
+# 		(options)
+# 			case $line[1] in
+#
+#
+# all build bundle clean completion completion_script console down fmt
+# force_unlock help import info init list logs new output plan providers refresh
+# seed setup show state summary test tfc up validate version
+#
+#
+#
+# 			esac
+# 			;;
+# 	esac
+
+
+
+}
+
+
+_terraspace "$@"

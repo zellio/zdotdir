@@ -37,7 +37,8 @@ rvm_path="$XDG_DATA_HOME"/rvm
 if [ -s "$rvm_path"/scripts/rvm ]; then
 	export rvm_path
 
-	function rmv {
+	function rmv
+	{
 		source "$rvm_path"/scripts/rvm
 		rvm "$@"
 	}

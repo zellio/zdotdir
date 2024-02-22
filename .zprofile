@@ -78,3 +78,5 @@ function is_installed
 
 is_installed systemctl &&
 	eval "$(/usr/bin/systemctl --user show-environment 2>/dev/null)"
+
+### .zprofile ends here

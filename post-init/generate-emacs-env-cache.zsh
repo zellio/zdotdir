@@ -1,23 +1,18 @@
 #!/usr/bin/env zsh
 
-cat <<'EOF' >"$XDG_CONFIG_HOME"/emacs/config/00_generated-env.el
-(mapc
- (lambda (pair)
-   (let ((name (car pair))
-		 (value (cdr pair)))
-	 (setenv name value)
-	 (when (string-equal name "PATH")
-       (setq
-		exec-path (append (parse-colon-path value) (list exec-directory)))
-	   (setq-default
-		eshell-path-env value))))
+CONFIG_FILE="$XDG_CONFIG_HOME"/emacs/config/01_generated-environment.el
+
+cat <<'EOF' >"$CONFIG_FILE"
+(user/load-environment
  '(
 EOF
 
 for env in $(declare -x | grep '^[A-Z]' | cut -d= -f1); do
-    printf '   ("%s" . "%s")\n' "$env" "${(P)env}" >>"$XDG_CONFIG_HOME"/emacs/config/00_generated-env.el
+    printf '   ("%s" . "%s")\n' "$env" "${(P)env}" >>"$CONFIG_FILE"
 done
 
-cat <<'EOF' >>"$XDG_CONFIG_HOME"/emacs/config/00_generated-env.el
+cat <<'EOF' >>"$CONFIG_FILE"
 ))
 EOF
+
+unset env CONFIG_FILE
