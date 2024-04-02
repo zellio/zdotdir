@@ -20,7 +20,7 @@ function is_virtual_machine
 
 typeset -Ax prompt_colours
 case "$TERM" in
-	*-256color)
+	*-256color|foot)
 		prompt_colours=(
 			binder '%F{033}' user '%F{081}' host '%F{166}' path '%F{147}'
 			git '%F{124}' metal '%f' container '%F{201}' vm '%F{226}'
