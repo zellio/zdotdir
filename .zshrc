@@ -56,7 +56,7 @@ case "$MACHINE-$OSTYPE" in
 		;;
 
 	*)
-		path=($path_dirs_system)
+		path=($path_dirs_prepend $path_dirs_system)
 		;;
 esac
 
