@@ -1,0 +1,15 @@
+#!/usr/bin/env zsh
+
+local socket_name
+
+if is_installed launchctl; then
+	socket_name='launchd-user.plist'
+elif is_installed systemctl; then
+	socket_name='systemd-user.service'
+fi
+
+local -a opts=(
+	"--socket-name=$socket_name"
+)
+
+command emacsclient --socket-name="$socket_name" "$@"

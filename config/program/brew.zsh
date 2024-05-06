@@ -3,7 +3,6 @@
 is_installed brew || return
 
 export HOMEBREW_API_AUTO_UPDATE_SECS=300
-export HOMEBREW_AUTOREMOVE=1
 export HOMEBREW_AUTO_UPDATE_SECS=43200
 export HOMEBREW_CACHE="$XDG_CACHE_HOME"/homebrew/cache
 export HOMEBREW_CLEANUP_MAX_AGE_DAYS=30
@@ -45,11 +44,16 @@ done
 
 local -a gnubins=(
 	'coreutils'
+	'ed'
 	'findutils'
 	'gawk'
+	'gnu-indent'
 	'gnu-sed'
+	'gnu-tar'
+	'gnu-which'
 	'grep'
 	'libtool'
+	'make'
 )
 
 for gnubin ( $gnubins ); do
@@ -59,22 +63,21 @@ for gnubin ( $gnubins ); do
 done
 
 local -a kegbins=(
-	'berkeley-db'
-	'bison'
-	'bzip2'
+	'berkeley-db@5'
+	'binutils'
 	'curl'
-	'flex'
+	'ed'
 	'gnu-getopt'
 	'icu4c'
-	'jpeg'
-	'krb5'
-	'libxml2'
+	'libarchive'
+	'libomp'
 	'llvm'
 	'm4'
-	'openjdk'
+	'ncurses'
 	'openldap'
-	'postgresql@12'
+	'readline'
 	'sqlite'
+	'unzip'
 )
 
 local keg
