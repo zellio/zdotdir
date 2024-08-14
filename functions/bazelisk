@@ -1,9 +1,0 @@
-#!/usr/bin/env zsh
-
-local CONFIG_FILE="${XDG_CONFIG_HOME:-"$HOME"/.config}"/bazel/bazelrc
-
-local -a bazel_args=(
-	--bazelrc "$CONFIG_FILE"
-)
-
-command bazelisk "${bazel_args[@]}" "$@"

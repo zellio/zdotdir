@@ -1,23 +1,5 @@
 #!/usr/bin/env zsh
 
-### Normalize System Variables
-
-export TERM="${TERM:-xterm-color}"
-export TERMINAL="${TERMINAL:-xterm}"
-export UID="${UID:-$(id -u)}"
-export USER="${USER:-$(id -un)}"
-export GID="${GID:-$(id -g)}"
-export GROUP="${GROUP:-$(id -gn)}"
-export HOME="${HOME:-$(getent passwd "$USER" | cut -d: -f6)}"
-export HOSTNAME="${HOSTNAME:-$(uname -n)}"
-export IFS="${IFS:-$' \t\n\0'}"
-export OSTYPE="${OSTYPE:-$(uname)}"
-export MACHINE="${MACHINE:-$(uname -m)}"
-export TZ="America/New_York"
-export LANG="en_US.UTF-8"
-export LANGUAGE="en"
-export LC_ALL="en_US.UTF-8"
-
 ### XDG Variables
 
 if [[ -s "$XDG_CONFIG_HOME/user-dirs.dirs" ]]; then
@@ -49,21 +31,6 @@ export WORDCHARS='*?_-.[]~&;!#$%^(){}<>'
 export TIMEFMT="%J
 Time: %U user | %S system | %P cpu | %*E total | %M KiB max RSS"
 
-### Less setup
-
-export PAGER='less'
-export LESS='-g -i -M -R -S -w -z-4'
-if (( $#commands[(i)lesspipe(|.sh)] )); then
-	export LESSOPEN="|/usr/bin/env $commands[(i)lesspipe(|.sh)] %s 2>&-"
-fi
-export LESSHISTFILE="$XDG_CACHE_HOME"/less/history
-
-### Quick file read via `< file'
-
-if [[ ! -z "$READNULLCMD" ]]; then
-	READNULLCMD="$PAGER"
-fi
-
 ### Functions
 
 function safe_source
@@ -75,8 +42,5 @@ function is_installed
 {
 	command -v "$1" >/dev/null 2>&1
 }
-
-is_installed systemctl &&
-	eval "$(/usr/bin/systemctl --user show-environment 2>/dev/null)"
 
 ### .zprofile ends here

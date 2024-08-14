@@ -1,23 +1,33 @@
 #!/usr/bin/env zsh
 
-### TRAMP is really picky so just disable zsh
+case "$TERM" in
+	tramp)
+		# TRAMP is really picky so just disable zsh
+		unsetopt zle
+		unsetopt prompt_cr
+		unsetopt prompt_subst
 
-if [[ "$TERM" == "tramp" ]]; then
-	unsetopt zle
-	unsetopt prompt_cr
-	unsetopt prompt_subst
+		if whence -w precmd >/dev/null; then
+			unfunction precmd
+		fi
 
-	if whence -w precmd >/dev/null; then
-		unfunction precmd
-	fi
+		if whence -w preexec >/dev/null; then
+			unfunction preexec
+		fi
+		PS1='$ '
 
-	if whence -w preexec >/dev/null; then
-		unfunction preexec
-	fi
-	PS1='$ '
+		return
+		;;
 
-	return
-fi
+	xterm*)
+		for term in xterm-256color xterm-color xterm; do
+			if infocmp "$term" >/dev/null 2>&1; then
+				export TERM="$term"
+				break
+			fi
+		done
+		;;
+esac
 
 ### Initialize dynamic path building
 
@@ -63,11 +73,10 @@ esac
 ### Load configuration
 
 for config (
-		"$ZDOTDIR"/config/zsh/*.zsh(.N)
-		"$ZDOTDIR"/config/program/*.zsh(.N)
-		"$ZDOTDIR"/custom/**/*.zsh(.N)
-		"$ZDOTDIR"/config/system/*.zsh(.N)
-		"$ZDOTDIR"/post-init/**/*.zsh(.N)
+		"$ZDOTDIR"/config/shell/**/*.zsh(.N)
+		"$ZDOTDIR"/config/os/**/*.zsh(.N)
+		"$ZDOTDIR"/config/prog/**/*.zsh
+		"$ZDOTDIR"/config/custom/**/*.zsh(.N)
 	); do
 	source "$config:A"
 done
@@ -100,3 +109,29 @@ compinit -i -d "$XDG_STATE_HOME"/zsh/zshcompdump
 
 autoload -U +X bashcompinit
 compinit -i -d "$XDG_STATE_HOME"/zsh/bashcompdump
+
+### Build path variable
+
+path=()
+for dir (
+	$path_dirs_prepend
+	$path_dirs_user
+	$path_dirs_program
+	$path_dirs_system
+	$path_dirs_append
+); do
+	[ -d "$dir" ] || continue
+	path=($path $dir)
+done
+
+export path PATH
+
+unset dir
+
+### Post config
+
+for config (
+		"$ZDOTDIR"/config/post/**/*.zsh(.N)
+	); do
+	source "$config:A"
+done
