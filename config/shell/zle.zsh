@@ -6,7 +6,6 @@ setopt EMACS
 setopt NO_OVERSTRIKE
 setopt NO_SINGLE_LINE_ZLE
 setopt NO_VI
-setopt ZLE
 
 bindkey -e
 bindkey '\ew' kill-region
