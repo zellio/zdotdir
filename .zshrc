@@ -81,6 +81,8 @@ for config (
 	source "$config:A"
 done
 
+unset config
+
 ### Load functions
 
 fpath=(
@@ -97,6 +99,8 @@ for func (
 	); do
 	autoload "$func:t"
 done
+
+unset func
 
 ### Compinit setup
 
@@ -126,7 +130,13 @@ done
 
 export path PATH
 
-unset dir
+unset \
+	path_dirs_prepend \
+	path_dirs_user \
+	path_dirs_program \
+	path_dirs_system \
+	path_dirs_append \
+	dir
 
 ### Post config
 
@@ -135,3 +145,7 @@ for config (
 	); do
 	source "$config:A"
 done
+
+unset config
+
+### .zshrc ends here

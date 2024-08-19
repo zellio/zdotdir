@@ -6,7 +6,8 @@ setopt CDABLE_VARS
 setopt NO_CD_SILENT
 setopt CHASE_DOTS
 setopt CHASE_LINKS
-setopt POSIX_CD
+setopt NO_POSIX_CD
 setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_MINUS
 setopt PUSHD_SILENT
 setopt PUSHD_TO_HOME

@@ -9,10 +9,6 @@ export XDG_STATE_HOME="${XDG_STATE_HOME:-"$HOME"/.local/state}"
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/"$UID"}"
 export XDG_BIN_DIR="${XDG_BIN_DIR:-"$HOME"/.local/bin}"
 
-### Set ZDOTDIR
-
-export ZDOTDIR="${ZDOTDIR:-"$XDG_CONFIG_HOME"/zsh}"
-
 ### Normalize System Variables
 
 export TERM="${TERM:-xterm-color}"
@@ -30,6 +26,10 @@ export TZ="America/New_York"
 export LANG="en_US.UTF-8"
 export LANGUAGE="en"
 export LC_ALL="en_US.UTF-8"
+
+### Set ZDOTDIR
+
+export ZDOTDIR="${ZDOTDIR:-"$XDG_CONFIG_HOME"/zsh}"
 
 ### Load zprofile in non-login scenarios
 
