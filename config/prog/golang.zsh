@@ -1,7 +1,10 @@
 #!/usr/bin/env zsh
 
-export GOPATH="${GOPATH:-"$XDG_DATA_HOME"/go}"
-export GOPROXY="${GOPROXY:-https://proxy.golang.org,direct}"
+GOPATH="${GOPATH:-"$XDG_DATA_HOME"/go}"
+
+[ -d "$GOPATH" ] || return
+
+path_dirs_user+=("$GOPATH"/bin)
 
 if is_installed goenv; then
 	export GOENV_ROOT="${GOENV_ROOT:-"$XDG_DATA_HOME"/goenv}"
@@ -17,3 +20,6 @@ if is_installed goenv; then
 		goenv "$@"
 	}
 fi
+
+export GOPATH
+export GOPROXY="${GOPROXY:-https://proxy.golang.org,direct}"
