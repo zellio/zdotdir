@@ -52,6 +52,7 @@ local -a gnubins=(
 	'gnu-indent'
 	'gnu-sed'
 	'gnu-tar'
+	'gnu-time'
 	'gnu-which'
 	'grep'
 	'libtool'
@@ -70,16 +71,19 @@ local -a kegbins=(
 	'curl'
 	'ed'
 	'gnu-getopt'
-	'icu4c'
+	'icu4c@75'
+	'icu4c@76'
+	'jpeg'
 	'libarchive'
+	'libgit2@1.7'
 	'libomp'
 	'llvm'
 	'm4'
 	'ncurses'
-	'openldap'
 	'readline'
 	'sqlite'
 	'unzip'
+	'zlib'
 )
 
 local keg
@@ -93,8 +97,8 @@ function brew-load-keg-flags
 
 	local -a kegs=(
 		"${(@f)$(
-						brew info --installed --json=v2 | jq --raw-output '.formulae[]|select(.keg_only)|.name'
-								)}"
+			brew info --installed --json=v2 | jq --raw-output '.formulae[]|select(.keg_only)|.name'
+		)}"
 	)
 
 	for keg ( $kegs ); do
@@ -114,10 +118,10 @@ function brew-load-keg-flags
 	done
 }
 
-typeset -UT LDFLAGS='' ldflags ' '
-typeset -UT CFLAGS='' cflags ' '
-typeset -UT CPPFLAGS='' cppflags ' '
-typeset -UT PKG_CONFIG_PATH='' pkg_config_path ':'
+typeset -gUT LDFLAGS='-L/opt/homebrew/lib' ldflags ' '
+typeset -gUT CFLAGS='-I/opt/homebrew/include' cflags ' '
+typeset -gUT CPPFLAGS='-I/opt/homebrew/include' cppflags ' '
+typeset -gUT PKG_CONFIG_PATH='/opt/homebrew/lib/pkgconfig:/opt/homebrew/share/pkgconfig' pkg_config_path ':'
 
 export LDFLAGS CFLAGS CPPFLAGS PKG_CONFIG_PAHT
 

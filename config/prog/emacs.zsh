@@ -12,7 +12,7 @@ declare emacsclient
 emacsclient="$(command -v emacsclient)"
 
 declare -a emacsclient_opts=(
-	"--socket-name=$EMACS_SOCKET_NAME"
+	"--socket-name=$XDG_RUNTIME_DIR/emacs/$EMACS_SOCKET_NAME"
 	'--create-frame'
 	'--alternate-editor=''emacs -nw'''
 )

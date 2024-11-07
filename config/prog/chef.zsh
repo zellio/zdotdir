@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-CHEF_HOME='/home/chef-workstation'
+CHEF_HOME='/opt/chef-workstation'
 
 [ -d "$CHEF_HOME" ] || return
 

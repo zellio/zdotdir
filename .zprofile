@@ -4,6 +4,7 @@
 
 if [ -s "$XDG_CONFIG_HOME"/user-dirs.dirs ]; then
 	source "$XDG_CONFIG_HOME"/user-dirs.dirs
+
 	export \
 		XDG_DESKTOP_DIR \
 		XDG_DOCUMENTS_DIR \
