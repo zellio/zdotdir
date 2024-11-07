@@ -1,5 +1,7 @@
 #!/usr/bin/env zsh
 
+export zzz_rc=1
+
 case "$TERM" in
 	tramp)
 		# TRAMP is really picky so just disable zsh

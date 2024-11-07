@@ -1,5 +1,7 @@
 #!/usr/bin/env zsh
 
+export zzz_env=1
+
 ### Default XDG variables
 
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-"$HOME"/.config}"

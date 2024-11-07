@@ -15,8 +15,8 @@ if is_installed goenv; then
 	function goenv
 	{
 		eval "$(
-				command goenv init - "$PROFILE_SHELL" | sed -ne '/goenv()/,/^}$/p'
-					)"
+			command goenv init - "$PROFILE_SHELL" | sed -ne '/goenv()/,/^}$/p'
+		)"
 		goenv "$@"
 	}
 fi

@@ -1,5 +1,7 @@
 #!/usr/bin/env zsh
 
+export zzz_profile=1
+
 ### XDG Variables
 
 if [ -s "$XDG_CONFIG_HOME"/user-dirs.dirs ]; then
