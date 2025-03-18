@@ -77,7 +77,7 @@ local -a kegbins=(
 	'libarchive'
 	'libgit2@1.7'
 	'libomp'
-	'llvm'
+	# 'llvm'
 	'm4'
 	'ncurses'
 	'readline'

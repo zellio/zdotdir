@@ -23,3 +23,5 @@ fi
 
 export GOPATH
 export GOPROXY="${GOPROXY:-https://proxy.golang.org,direct}"
+
+### golang.zsh ends here

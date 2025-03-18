@@ -1,0 +1,15 @@
+#!/usr/bin/env zsh
+
+WGET_DATA_DIR="$XDG_DATA_HOME"/wget
+
+[ ! -d "$WGET_DATA_DIR" ] && mkdir -p "$WGET_DATA_DIR"
+
+local -a wget_opts=(
+	"--hsts-file=$WGET_DATA_DIR/hsts"
+)
+
+command wget "${wget_opts[@]}" "$@"
+
+command wget --hsts-file="$XDG_DATA_HOME"/wget/hsts "$@"
+
+### wget ends here
